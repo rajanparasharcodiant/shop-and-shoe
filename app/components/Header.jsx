@@ -1,26 +1,48 @@
+import { useEffect, useState } from 'react';
 import {Suspense} from 'react';
 import {Await, NavLink, useAsyncValue} from '@remix-run/react';
 import {useAnalytics, useOptimisticCart} from '@shopify/hydrogen';
 import {useAside} from '~/components/Aside';
+import logo from '~/assets/shop-and-shoe.png';
+import searchIcon from '~/assets/search.png';
+import signInIcon from '~/assets/user.png';
+import cartIcon from '~/assets/shopping.png';
 
 /**
  * @param {HeaderProps}
  */
 export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
   const {shop, menu} = header;
+  const [isSticky, setIsSticky] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsSticky(true);
+      } else {
+        setIsSticky(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="header">
-      <NavLink prefetch="intent" to="/" style={activeLinkStyle} end>
-        <strong>{shop.name}</strong>
-      </NavLink>
-      <HeaderMenu
-        menu={menu}
-        viewport="desktop"
-        primaryDomainUrl={header.shop.primaryDomain.url}
-        publicStoreDomain={publicStoreDomain}
-      />
-      <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
-    </header>
+    <div className={`header-container ${isSticky ? 'sticky top-0' : ''}`}>
+      <header className="header">
+        <HeaderMenu
+          menu={menu}
+          viewport="desktop"
+          primaryDomainUrl={header.shop.primaryDomain.url}
+          publicStoreDomain={publicStoreDomain}
+        />
+        <NavLink prefetch="intent" to="/" style={activeLinkStyle} end>
+        <img src={logo} alt='logo' className='' />
+        </NavLink>
+        <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
+      </header>
+    </div>
   );
 }
 
@@ -86,13 +108,14 @@ export function HeaderMenu({
  * @param {Pick<HeaderProps, 'isLoggedIn' | 'cart'>}
  */
 function HeaderCtas({isLoggedIn, cart}) {
+  const signIn = <img src={signInIcon} alt="logo" className="h-6" />;
   return (
     <nav className="header-ctas" role="navigation">
       <HeaderMenuMobileToggle />
       <NavLink prefetch="intent" to="/account" style={activeLinkStyle}>
         <Suspense fallback="Sign in">
           <Await resolve={isLoggedIn} errorElement="Sign in">
-            {(isLoggedIn) => (isLoggedIn ? 'Account' : 'Sign in')}
+            {(isLoggedIn) => (isLoggedIn ? 'Account' : signIn)}
           </Await>
         </Suspense>
       </NavLink>
@@ -116,9 +139,10 @@ function HeaderMenuMobileToggle() {
 
 function SearchToggle() {
   const {open} = useAside();
+  const search = <img src={searchIcon} alt="logo" className="h-6" />;
   return (
     <button className="reset" onClick={() => open('search')}>
-      Search
+      {search}
     </button>
   );
 }
@@ -129,9 +153,10 @@ function SearchToggle() {
 function CartBadge({count}) {
   const {open} = useAside();
   const {publish, shop, cart, prevCart} = useAnalytics();
-
+  const carticon = <img src={cartIcon} alt="logo" className="h-6" />;
   return (
     <a
+    className='header-cart'
       href="/cart"
       onClick={(e) => {
         e.preventDefault();
@@ -144,7 +169,7 @@ function CartBadge({count}) {
         });
       }}
     >
-      Cart {count === null ? <span>&nbsp;</span> : count}
+      {carticon}<span className='cart-count'>({count === null ? <span>&nbsp;</span> : count})</span>
     </a>
   );
 }
@@ -219,7 +244,7 @@ const FALLBACK_HEADER_MENU = {
 function activeLinkStyle({isActive, isPending}) {
   return {
     fontWeight: isActive ? 'bold' : undefined,
-    color: isPending ? 'grey' : 'black',
+    color: isPending ? 'grey' : '#345546',
   };
 }
 

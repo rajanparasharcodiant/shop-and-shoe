@@ -50,7 +50,7 @@ export default function Collections() {
   const {collections} = useLoaderData();
 
   return (
-    <div className="collections">
+    <div className="collections w-full px-4 py-8">
       <h1>Collections</h1>
       <PaginatedResourceSection
         connection={collections}

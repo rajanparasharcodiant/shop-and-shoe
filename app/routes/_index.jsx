@@ -1,6 +1,10 @@
-import {Await, useLoaderData, Link} from '@remix-run/react';
-import {Suspense} from 'react';
-import {Image, Money} from '@shopify/hydrogen';
+import {useLoaderData, Link} from '@remix-run/react';
+import VideoBanner from "../components/VideoBanner";
+import TabProductSlider from "../components/TabbedProductSlider";
+import {Swiper, SwiperSlide} from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import {Navigation} from 'swiper/modules';
 
 /**
  * @type {MetaFunction}
@@ -28,14 +32,27 @@ export async function loader(args) {
  * @param {LoaderFunctionArgs}
  */
 async function loadCriticalData({context}) {
-  const [{collections}] = await Promise.all([
-    context.storefront.query(FEATURED_COLLECTION_QUERY),
-    // Add other queries here, so that they are loaded in parallel
-  ]);
+  const tabbedCollectionHandles = ['mens-shoes', 'womens-shoes'];
+
+  const tabbedCollections = (
+    await Promise.all(
+      tabbedCollectionHandles.map(async (handle) => {
+        const {collection} = await context.storefront.query(
+          TAB_FIRST_COLLECTION_QUERY,
+          {variables: {handle}}
+        );
+        return collection;
+      })
+    )
+  ).filter(Boolean);
+
+  const { collections } = await context.storefront.query(ALL_COLLECTIONS_QUERY);
 
   return {
-    featuredCollection: collections.nodes[0],
+    tabbedCollections,
+    allCollections: collections.nodes,
   };
+  
 }
 
 /**
@@ -45,17 +62,7 @@ async function loadCriticalData({context}) {
  * @param {LoaderFunctionArgs}
  */
 function loadDeferredData({context}) {
-  const recommendedProducts = context.storefront
-    .query(RECOMMENDED_PRODUCTS_QUERY)
-    .catch((error) => {
-      // Log query errors, but don't throw them so the page can still render
-      console.error(error);
-      return null;
-    });
-
-  return {
-    recommendedProducts,
-  };
+  return {};
 }
 
 export default function Homepage() {
@@ -63,78 +70,57 @@ export default function Homepage() {
   const data = useLoaderData();
   return (
     <div className="home">
-      <FeaturedCollection collection={data.featuredCollection} />
-      <RecommendedProducts products={data.recommendedProducts} />
+      <VideoBanner />
+      <TabProductSlider collections={data.tabbedCollections} />
+      <CollectionProduct collections={data.allCollections} />
     </div>
   );
 }
 
-/**
- * @param {{
- *   collection: FeaturedCollectionFragment;
- * }}
- */
-function FeaturedCollection({collection}) {
-  if (!collection) return null;
-  const image = collection?.image;
-  return (
-    <Link
-      className="featured-collection"
-      to={`/collections/${collection.handle}`}
-    >
-      {image && (
-        <div className="featured-collection-image">
-          <Image data={image} sizes="100vw" />
-        </div>
-      )}
-      <h1>{collection.title}</h1>
-    </Link>
-  );
-}
 
-/**
- * @param {{
- *   products: Promise<RecommendedProductsQuery | null>;
- * }}
- */
-function RecommendedProducts({products}) {
+function CollectionProduct({ collections }) {
+  if (!collections || collections.length === 0) return null;
+
   return (
-    <div className="recommended-products">
-      <h2>Recommended Products</h2>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Await resolve={products}>
-          {(response) => (
-            <div className="recommended-products-grid">
-              {response
-                ? response.products.nodes.map((product) => (
-                    <Link
-                      key={product.id}
-                      className="recommended-product"
-                      to={`/products/${product.handle}`}
-                    >
-                      <Image
-                        data={product.images.nodes[0]}
-                        aspectRatio="1/1"
-                        sizes="(min-width: 45em) 20vw, 50vw"
-                      />
-                      <h4>{product.title}</h4>
-                      <small>
-                        <Money data={product.priceRange.minVariantPrice} />
-                      </small>
-                    </Link>
-                  ))
-                : null}
-            </div>
-          )}
-        </Await>
-      </Suspense>
-      <br />
+    <div className="shop-by-category relative w-full px-4 py-8">
+      <h3 className="text-2xl font-bold mb-4 text-center pb-5">Shop by Category</h3>
+      <Swiper 
+              key={collections.id}
+              modules={[Navigation]}
+              loop={true}
+              spaceBetween={16}
+              slidesPerView={2}
+              breakpoints={{
+                640: {slidesPerView: 2},
+                768: {slidesPerView: 3},
+                1024: {slidesPerView: 4},
+              }}
+            >
+      <div className="grid-products">
+        {collections.map((collection) => (
+          <SwiperSlide>
+            <Link key={collection.id} to={`/collections/${collection.handle}`} className="collection-card">
+              {collection.image ? (
+                <>
+                <div>
+                  <img src={collection.image.url} alt={collection.image.altText || collection.title} className="collection-image w-full h-[500px] object-cover" />
+                  <h4 className="text-lg font-medium">{collection.title}</h4>
+                </div>
+                </>
+              ) : (
+                <h4 className="text-lg font-medium">{collection.title}</h4>
+              )}
+            </Link>
+            </SwiperSlide>
+        ))}
+      </div>
+      </Swiper>
     </div>
   );
 }
 
-const FEATURED_COLLECTION_QUERY = `#graphql
-  fragment FeaturedCollection on Collection {
+const TAB_FIRST_COLLECTION_QUERY = `#graphql
+  fragment TabFirstCollection on Collection {
     id
     title
     image {
@@ -145,50 +131,66 @@ const FEATURED_COLLECTION_QUERY = `#graphql
       height
     }
     handle
-  }
-  query FeaturedCollection($country: CountryCode, $language: LanguageCode)
-    @inContext(country: $country, language: $language) {
-    collections(first: 1, sortKey: UPDATED_AT, reverse: true) {
-      nodes {
-        ...FeaturedCollection
-      }
-    }
-  }
-`;
-
-const RECOMMENDED_PRODUCTS_QUERY = `#graphql
-  fragment RecommendedProduct on Product {
-    id
-    title
-    handle
-    priceRange {
-      minVariantPrice {
-        amount
-        currencyCode
-      }
-    }
-    images(first: 1) {
+    products(first: 10) {
       nodes {
         id
-        url
-        altText
-        width
-        height
+        title
+        handle
+        images(first: 1) {
+          nodes {
+            id
+            url
+            altText
+            width
+            height
+          }
+        }
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+          maxVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+        variants(first: 1) {
+          nodes {
+            id
+            priceV2 {
+              amount
+              currencyCode
+            }
+            compareAtPriceV2 {
+              amount
+              currencyCode
+            }
+          }
+        }
       }
     }
   }
-  query RecommendedProducts ($country: CountryCode, $language: LanguageCode)
-    @inContext(country: $country, language: $language) {
-    products(first: 4, sortKey: UPDATED_AT, reverse: true) {
-      nodes {
-        ...RecommendedProduct
-      }
+  query FeaturedCollection($handle: String!) {
+    collection(handle: $handle) {
+      ...TabFirstCollection
     }
   }
 `;
 
-/** @typedef {import('@shopify/remix-oxygen').LoaderFunctionArgs} LoaderFunctionArgs */
-/** @template T @typedef {import('@remix-run/react').MetaFunction<T>} MetaFunction */
-/** @typedef {import('storefrontapi.generated').FeaturedCollectionFragment} FeaturedCollectionFragment */
-/** @typedef {import('storefrontapi.generated').RecommendedProductsQuery} RecommendedProductsQuery */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
+
+const ALL_COLLECTIONS_QUERY = `#graphql
+  query AllCollections {
+    collections(first: 20) {
+      nodes {
+        id
+        title
+        handle
+        image {
+          url
+          altText
+        }
+      }
+    }
+  }
+`;

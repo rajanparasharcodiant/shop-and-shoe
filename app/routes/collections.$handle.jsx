@@ -78,9 +78,9 @@ export default function Collection() {
   const {collection} = useLoaderData();
 
   return (
-    <div className="collection">
-      <h1>{collection.title}</h1>
-      <p className="collection-description">{collection.description}</p>
+    <div className="collection w-full px-4 py-8">
+      <h1 className="text-2xl md:text-6xl font-bold text-center">{collection.title}</h1>
+      {/* <p className="collection-description">{collection.description}</p> */}
       <PaginatedResourceSection
         connection={collection.products}
         resourcesClassName="products-grid"
@@ -124,15 +124,25 @@ function ProductItem({product, loading}) {
         <Image
           alt={product.featuredImage.altText || product.title}
           aspectRatio="1/1"
+          width={1000}
+          height={1000}
+          crop=""
           data={product.featuredImage}
           loading={loading}
           sizes="(min-width: 45em) 400px, 100vw"
         />
       )}
-      <h4>{product.title}</h4>
-      <small>
-        <Money data={product.priceRange.minVariantPrice} />
-      </small>
+      <h4 className="text-lg font-medium">{product.title}</h4>
+      <span className="tab-content-price flex gap-2 items-center">
+        {product.variants.nodes[0]?.compareAtPriceV2 && (
+          <span className="text-sm text-gray-400 line-through">
+            <Money data={product.variants.nodes[0].compareAtPriceV2} />
+          </span>
+        )}
+        <span className="text-md font-semibold text-[#345546]-600">
+          <Money data={product.priceRange.minVariantPrice} />
+        </span>
+      </span>
     </Link>
   );
 }
@@ -161,6 +171,19 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
         ...MoneyProductItem
       }
     }
+    variants(first: 1) {
+    nodes {
+      id
+      priceV2 {
+        amount
+        currencyCode
+      }
+      compareAtPriceV2 {
+        amount
+        currencyCode
+      }
+    }
+  }
   }
 `;
 

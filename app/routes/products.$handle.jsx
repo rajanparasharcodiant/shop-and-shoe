@@ -102,8 +102,8 @@ export default function Product() {
   const {title, descriptionHtml} = product;
 
   return (
-    <div className="product">
-      <ProductImage image={selectedVariant?.image} />
+    <div className="product w-full px-4 py-8">
+      <ProductImage image={selectedVariant?.image} allImages={product?.images?.nodes} />
       <div className="product-main">
         <h1>{title}</h1>
         <ProductPrice
@@ -187,6 +187,15 @@ const PRODUCT_FRAGMENT = `#graphql
     vendor
     handle
     descriptionHtml
+    images(first: 10) {
+        nodes {
+          id
+          url
+          altText
+          width
+          height
+        }
+      }
     description
     encodedVariantExistence
     encodedVariantAvailability

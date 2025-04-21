@@ -1,6 +1,6 @@
 import {getShopAnalytics} from '@shopify/hydrogen';
 import {Outlet, useRouteError, isRouteErrorResponse} from '@remix-run/react';
-import favicon from '~/assets/favicon.svg';
+import favicon from '~/assets/fevicon.png';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
 
 /**

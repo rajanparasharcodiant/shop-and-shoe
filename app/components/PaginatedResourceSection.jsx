@@ -27,7 +27,7 @@ export function PaginatedResourceSection({
             ) : (
               resourcesMarkup
             )}
-            <NextLink>
+            <NextLink className='text-center w-fit block button px-4 border border-[#345546] py-2 cursor-pointer rounded-full text-sm font-semibold transition bg-[#345546] text-white'>
               {isLoading ? 'Loading...' : <span>Load more ↓</span>}
             </NextLink>
           </div>
