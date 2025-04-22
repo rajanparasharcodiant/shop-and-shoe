@@ -1,7 +1,0 @@
-[build]
-  command = "npm run build"  # or "yarn build"
-  publish = "dist"
-
-[context.production.environment]
-PUBLIC_STORE_DOMAIN="shop-and-shoe.myshopify.com"
-PUBLIC_STOREFRONT_API_TOKEN="cbfe738d6fbdcefacca1cf396ad0a8fa"

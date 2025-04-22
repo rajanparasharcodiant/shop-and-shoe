@@ -29,7 +29,7 @@ function SearchResultsArticles({term, articles}) {
   return (
     <div className="search-result">
       <h2>Articles</h2>
-      <div>
+      <div className='article-search-results'>
         {articles?.nodes?.map((article) => {
           const articleUrl = urlWithTrackingParams({
             baseUrl: `/blogs/${article.handle}`,
@@ -62,7 +62,7 @@ function SearchResultsPages({term, pages}) {
   return (
     <div className="search-result">
       <h2>Pages</h2>
-      <div>
+      <div className='page-search-results'>
         {pages?.nodes?.map((page) => {
           const pageUrl = urlWithTrackingParams({
             baseUrl: `/pages/${page.handle}`,
@@ -111,7 +111,7 @@ function SearchResultsProducts({term, products}) {
               <div className="search-results-item" key={product.id}>
                 <Link prefetch="intent" to={productUrl}>
                   {image && (
-                    <Image data={image} alt={product.title} width={50} />
+                    <Image data={image} alt={product.title} width={150} />
                   )}
                   <div>
                     <p>{product.title}</p>

@@ -1,5 +1,7 @@
 import {CartForm, Money} from '@shopify/hydrogen';
 import {useRef} from 'react';
+import {Link} from '@remix-run/react';
+import {useAside} from '~/components/Aside';
 
 /**
  * @param {CartSummaryProps}
@@ -7,12 +9,17 @@ import {useRef} from 'react';
 export function CartSummary({cart, layout}) {
   const className =
     layout === 'page' ? 'cart-summary-page' : 'cart-summary-aside';
-
+  const {close} = useAside();
   return (
     <div aria-labelledby="cart-summary" className={className}>
       <h4>Totals</h4>
+      <Link className='continue-cart-page' to="/cart/" onClick={close} prefetch="viewport">
+        Cart Page
+      </Link>
+      <div className="cart-summary-details">
       <dl className="cart-subtotal">
-        <dt>Subtotal</dt>
+        <dt><span>Subtotal</span></dt>
+        <div></div>
         <dd>
           {cart.cost?.subtotalAmount?.amount ? (
             <Money data={cart.cost?.subtotalAmount} />
@@ -23,7 +30,13 @@ export function CartSummary({cart, layout}) {
       </dl>
       <CartDiscounts discountCodes={cart.discountCodes} />
       <CartGiftCard giftCardCodes={cart.appliedGiftCards} />
-      <CartCheckoutActions checkoutUrl={cart.checkoutUrl} />
+      </div>
+      <div className="cart-checkout-actions">
+        <CartCheckoutActions checkoutUrl={cart.checkoutUrl} />
+        <Link className='continue-shopping' to="/collections/all" onClick={close} prefetch="viewport">
+          Continue shopping →
+        </Link>
+      </div>
     </div>
   );
 }
@@ -34,12 +47,11 @@ function CartCheckoutActions({checkoutUrl}) {
   if (!checkoutUrl) return null;
 
   return (
-    <div>
-      <a href={checkoutUrl} target="_self">
-        <p>Continue to Checkout &rarr;</p>
+    
+      <a className='checkout-btn' href={checkoutUrl} target="_self">
+        Continue to Checkout &rarr;
       </a>
-      <br />
-    </div>
+    
   );
 }
 
@@ -72,9 +84,9 @@ function CartDiscounts({discountCodes}) {
 
       {/* Show an input to apply a discount */}
       <UpdateDiscountForm discountCodes={codes}>
-        <div>
+      <div className='cart-discount-code'>
+        <span>Discount code</span>
           <input type="text" name="discountCode" placeholder="Discount code" />
-          &nbsp;
           <button type="submit">Apply</button>
         </div>
       </UpdateDiscountForm>
@@ -146,14 +158,14 @@ function CartGiftCard({giftCardCodes}) {
         giftCardCodes={appliedGiftCardCodes.current}
         saveAppliedCode={saveAppliedCode}
       >
-        <div>
+        <div className='cart-gift card-code'>
+          <span>Gift card</span>
           <input
             type="text"
             name="giftCardCode"
             placeholder="Gift card code"
             ref={giftCardCodeInput}
           />
-          &nbsp;
           <button type="submit">Apply</button>
         </div>
       </UpdateGiftCardForm>
@@ -180,9 +192,7 @@ function UpdateGiftCardForm({giftCardCodes, saveAppliedCode, children}) {
     >
       {(fetcher) => {
         const code = fetcher.formData?.get('giftCardCode');
-        if (code && saveAppliedCode) {
-          saveAppliedCode(code);
-        }
+        if (code) saveAppliedCode && saveAppliedCode(code);
         return children;
       }}
     </CartForm>

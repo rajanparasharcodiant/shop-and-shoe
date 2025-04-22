@@ -1,10 +1,11 @@
 import {useLoaderData, Link} from '@remix-run/react';
 import VideoBanner from "../components/VideoBanner";
-import TabProductSlider from "../components/TabbedProductSlider";
 import {Swiper, SwiperSlide} from 'swiper/react';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import {Navigation} from 'swiper/modules';
+import {useState} from 'react';
+import {Image, Money} from '@shopify/hydrogen';
 
 /**
  * @type {MetaFunction}
@@ -17,20 +18,11 @@ export const meta = () => {
  * @param {LoaderFunctionArgs} args
  */
 export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
-
   return {...deferredData, ...criticalData};
 }
 
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {LoaderFunctionArgs}
- */
 async function loadCriticalData({context}) {
   const tabbedCollectionHandles = ['mens-shoes', 'womens-shoes'];
 
@@ -46,48 +38,68 @@ async function loadCriticalData({context}) {
     )
   ).filter(Boolean);
 
-  const { collections } = await context.storefront.query(ALL_COLLECTIONS_QUERY);
+  const {collections} = await context.storefront.query(ALL_COLLECTIONS_QUERY);
 
   return {
     tabbedCollections,
     allCollections: collections.nodes,
   };
-  
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {LoaderFunctionArgs}
- */
 function loadDeferredData({context}) {
   return {};
 }
 
 export default function Homepage() {
-  /** @type {LoaderReturnData} */
   const data = useLoaderData();
+  const safeCollections = data.tabbedCollections?.filter(Boolean) || [];
+  const [activeTab, setActiveTab] = useState(safeCollections[0]?.title || '');
+
   return (
     <div className="home">
       <VideoBanner />
-      <TabProductSlider collections={data.tabbedCollections} />
+      <TabProductSlider
+        collections={data.tabbedCollections}
+        safeCollections={safeCollections}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
       <CollectionProduct collections={data.allCollections} />
     </div>
   );
 }
 
-
-function CollectionProduct({ collections }) {
-  if (!collections || collections.length === 0) return null;
-
+function TabProductSlider({collections, safeCollections, activeTab, setActiveTab}) {
   return (
-    <div className="shop-by-category relative w-full px-4 py-8">
-      <h3 className="text-2xl font-bold mb-4 text-center pb-5">Shop by Category</h3>
-      <Swiper 
-              key={collections.id}
+    <div className="product-tab-shopify-section relative w-full px-4 py-8">
+      <h3 className="text-2xl font-bold mb-4 text-center pb-5">Shop the Latest</h3>
+
+      <div className="justify-center flex space-x-4 mb-4">
+        {safeCollections.map((collection) => (
+          <button
+            key={collection.id}
+            onClick={() => setActiveTab(collection.title)}
+            className={`px-4 border border-[#345546] py-2 cursor-pointer rounded-full text-sm font-semibold transition ${
+              activeTab === collection.title
+                ? 'bg-[#345546] text-white'
+                : 'text-[#345546]'
+            }`}
+          >
+            {collection.title}
+          </button>
+        ))}
+      </div>
+
+      {safeCollections.map(
+        (collection) =>
+          activeTab === collection.title && (
+            <Swiper
+              key={collection.id}
               modules={[Navigation]}
-              loop={true}
+              navigation={{
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
+              }}
               spaceBetween={16}
               slidesPerView={2}
               breakpoints={{
@@ -96,24 +108,91 @@ function CollectionProduct({ collections }) {
                 1024: {slidesPerView: 4},
               }}
             >
-      <div className="grid-products">
+              {collection.products.nodes.map((product) => (
+                <SwiperSlide key={product.id}>
+                  <div className="p-2">
+                    {product.images?.nodes?.[0] && (
+                      <Link to={`/products/${product.handle}`}>
+                        <Image
+                          data={product.images.nodes[0]}
+                          sizes="(min-width: 45em) 20vw, 50vw"
+                          crop=""
+                          height={1000}
+                          width={1000}
+                        />
+                      </Link>
+                    )}
+                    <span className="p-4 block">
+                      <h4 className="text-lg font-medium">{product.title}</h4>
+                      <span className="tab-content-price flex gap-2 items-center">
+                        {product.variants.nodes[0]?.compareAtPriceV2 && (
+                          <span className="text-sm text-gray-400 line-through">
+                            <Money data={product.variants.nodes[0].compareAtPriceV2} />
+                          </span>
+                        )}
+                        <span className="text-lg font-semibold text-[#345546]-600">
+                          <Money data={product.priceRange.minVariantPrice} />
+                        </span>
+                      </span>
+                    </span>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          )
+      )}
+
+      <div className="swiper-nav-buttons flex justify-between mb-4">
+        <button className="swiper-button-prev tab-swiper-button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M15 6L9 12L15 18" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        </button>
+        <button className="swiper-button-next tab-swiper-button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CollectionProduct({collections}) {
+  if (!collections || collections.length === 0) return null;
+
+  return (
+    <div className="shop-by-category relative w-full px-4 py-8">
+      <h3 className="text-2xl font-bold mb-4 text-center pb-5">Shop by Category</h3>
+      <Swiper
+        modules={[Navigation]}
+        loop={true}
+        spaceBetween={16}
+        slidesPerView={2}
+        breakpoints={{
+          640: {slidesPerView: 2},
+          768: {slidesPerView: 3},
+          1024: {slidesPerView: 4},
+        }}
+      >
         {collections.map((collection) => (
-          <SwiperSlide>
-            <Link key={collection.id} to={`/collections/${collection.handle}`} className="collection-card">
+          <SwiperSlide key={collection.id}>
+            <Link to={`/collections/${collection.handle}`} className="collection-card">
               {collection.image ? (
-                <>
                 <div>
-                  <img src={collection.image.url} alt={collection.image.altText || collection.title} className="collection-image w-full h-[500px] object-cover" />
+                  <img
+                    src={collection.image.url}
+                    alt={collection.image.altText || collection.title}
+                    className="collection-image w-full h-[500px] object-cover"
+                  />
                   <h4 className="text-lg font-medium">{collection.title}</h4>
                 </div>
-                </>
               ) : (
                 <h4 className="text-lg font-medium">{collection.title}</h4>
               )}
             </Link>
-            </SwiperSlide>
+          </SwiperSlide>
         ))}
-      </div>
       </Swiper>
     </div>
   );
@@ -171,13 +250,13 @@ const TAB_FIRST_COLLECTION_QUERY = `#graphql
       }
     }
   }
+
   query FeaturedCollection($handle: String!) {
     collection(handle: $handle) {
       ...TabFirstCollection
     }
   }
 `;
-
 
 const ALL_COLLECTIONS_QUERY = `#graphql
   query AllCollections {

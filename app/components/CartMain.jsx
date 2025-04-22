@@ -19,13 +19,14 @@ export function CartMain({layout, cart: originalCart}) {
     cart &&
     Boolean(cart?.discountCodes?.filter((code) => code.applicable)?.length);
   const className = `cart-main ${withDiscount ? 'with-discount' : ''}`;
-  const cartHasItems = cart?.totalQuantity && cart?.totalQuantity > 0;
+  const attrName = `${linesCount}`;
+  const cartHasItems = cart?.totalQuantity > 0;
 
   return (
-    <div className={className}>
+    <div product-count={attrName} className={className}>
       <CartEmpty hidden={linesCount} layout={layout} />
       <div className="cart-details">
-        <div aria-labelledby="cart-lines">
+        <div className='cart-items-details' aria-labelledby="cart-lines">
           <ul>
             {(cart?.lines?.nodes ?? []).map((line) => (
               <CartLineItem key={line.id} line={line} layout={layout} />
@@ -54,7 +55,7 @@ function CartEmpty({hidden = false}) {
         started!
       </p>
       <br />
-      <Link to="/collections" onClick={close} prefetch="viewport">
+      <Link to="/collections/all" onClick={close} prefetch="viewport">
         Continue shopping →
       </Link>
     </div>

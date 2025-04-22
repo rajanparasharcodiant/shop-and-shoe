@@ -22,12 +22,13 @@ export function CartLineItem({layout, line}) {
     <li key={id} className="cart-line">
       {image && (
         <Image
+          className='cart-line-image'
           alt={title}
-          aspectRatio="1/1"
+          aspectRatio="0.8/1"
           data={image}
-          height={100}
+          height={140}
           loading="lazy"
-          width={100}
+          width='auto'
         />
       )}
 
@@ -42,7 +43,7 @@ export function CartLineItem({layout, line}) {
           }}
         >
           <p>
-            <strong>{product.title}</strong>
+            {product.title}
           </p>
         </Link>
         <ProductPrice price={line?.cost?.totalAmount} />
@@ -73,9 +74,9 @@ function CartLineQuantity({line}) {
   const prevQuantity = Number(Math.max(0, quantity - 1).toFixed(0));
   const nextQuantity = Number((quantity + 1).toFixed(0));
 
-  return (
+  return ( 
     <div className="cart-line-quantity">
-      <small>Quantity: {quantity} &nbsp;&nbsp;</small>
+      <div className='quantity-control'>
       <CartLineUpdateButton lines={[{id: lineId, quantity: prevQuantity}]}>
         <button
           aria-label="Decrease quantity"
@@ -86,7 +87,7 @@ function CartLineQuantity({line}) {
           <span>&#8722; </span>
         </button>
       </CartLineUpdateButton>
-      &nbsp;
+      <span className='quantity-value'>{quantity}</span>
       <CartLineUpdateButton lines={[{id: lineId, quantity: nextQuantity}]}>
         <button
           aria-label="Increase quantity"
@@ -97,7 +98,7 @@ function CartLineQuantity({line}) {
           <span>&#43;</span>
         </button>
       </CartLineUpdateButton>
-      &nbsp;
+      </div>
       <CartLineRemoveButton lineIds={[lineId]} disabled={!!isOptimistic} />
     </div>
   );
@@ -120,7 +121,7 @@ function CartLineRemoveButton({lineIds, disabled}) {
       inputs={{lineIds}}
     >
       <button disabled={disabled} type="submit">
-        Remove
+        <img src='https://cdn.shopify.com/s/files/1/0661/1900/8416/files/bin.png?v=1738821953' className='remove-cart-item' alt='Remove' />
       </button>
     </CartForm>
   );
