@@ -1172,6 +1172,9 @@ body.scroll-off {
 .product-options-grid li:hover button {
   text-decoration: none;
 }
+.product-options-item, .product-options-item:disabled {
+  min-width: 70px;
+}
 .product-form form {
   margin-top: 40px;
 }

@@ -1,4 +1,8 @@
-import {useLoaderData} from '@remix-run/react';
+import { useState } from "react";
+import {Await, useLoaderData, Link} from '@remix-run/react';
+import { Suspense } from "react";
+import { Image, Money } from "@shopify/hydrogen";
+
 import {
   getSelectedProductOptions,
   Analytics,
@@ -10,6 +14,16 @@ import {
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductImage} from '~/components/ProductImage';
 import {ProductForm} from '~/components/ProductForm';
+
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Thumbs } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/thumbs';
+
+import { useRef } from "react";
+
+
 
 /**
  * @type {MetaFunction<typeof loader>}
@@ -76,15 +90,27 @@ function loadDeferredData({context, params}) {
   // Put any API calls that is not critical to be available on first page render
   // For example: product reviews, product recommendations, social feeds.
 
-  return {};
+  return {
+    recommendedProducts: context.storefront
+      .query(RECOMMENDED_PRODUCTS_QUERY)
+      .catch((error) => {
+        console.error("Failed to load recommended products:", error);
+        return null; // Ensure null return on failure
+      }),
+  };
 }
 
 export default function Product() {
   /** @type {LoaderReturnData} */
   const {product} = useLoaderData();
+  const data = useLoaderData();
+  // console.log(product, 'product');
+  const thumbsSwiperRef = useRef(null);
+  const [quantity, setQuantity] = useState(1);
 
   // Optimistically selects a variant with given available variant information
   const selectedVariant = useOptimisticVariant(
+    
     product.selectedOrFirstAvailableVariant,
     getAdjacentAndFirstAvailableVariants(product),
   );
@@ -100,29 +126,68 @@ export default function Product() {
   });
 
   const {title, descriptionHtml} = product;
+  const [selectedImage, setSelectedImage] = useState(selectedVariant?.image || product.images.nodes[0]);
 
   return (
-    <div className="product w-full px-4 py-8">
-      <ProductImage image={selectedVariant?.image} allImages={product?.images?.nodes} />
+    <>
+    <div className="page-width">
+    <div className="product">
+    <div className="product-gallery">
+      
+    
+    <Swiper
+      onSwiper={(swiper) => (thumbsSwiperRef.current = swiper)}
+      spaceBetween={10}
+      slidesPerView={6}
+      modules={[Thumbs]}
+      className="product-thumbnails"
+    >
+      {product.images.nodes.map((image) => (
+        <SwiperSlide key={image.id} className={selectedImage.id === image.id ? 'product-slide-active' : ''} onClick={() => setSelectedImage(image)}>
+          <Image
+            data={image}
+            aspectRatio="1/1"
+            sizes="(min-width: 45em) 20vw, 50vw"
+          />
+        </SwiperSlide>
+      ))}
+    </Swiper>
+    <ProductImage image={selectedVariant?.image} allImages={product?.images?.nodes} />
+    </div>
+
+      
       <div className="product-main">
         <h1>{title}</h1>
         <ProductPrice
           price={selectedVariant?.price}
           compareAtPrice={selectedVariant?.compareAtPrice}
         />
+        <div className="product--short-description" dangerouslySetInnerHTML={{__html: descriptionHtml}} />
+        <div className="quantity-selector">
+          <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+          <span class="svg-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" class="icon icon-minus" viewBox="0 0 10 2"><path fill="currentColor" fill-rule="evenodd" d="M.5 1C.5.7.7.5 1 .5h8a.5.5 0 1 1 0 1H1A.5.5 0 0 1 .5 1" clip-rule="evenodd"></path></svg>
+          </span>
+          </button>
+          <input
+            type="number"
+            value={quantity}
+            min="1"
+            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+          />
+          <button type="button" onClick={() => setQuantity(quantity + 1)}>
+          <span class="svg-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" class="icon icon-plus" viewBox="0 0 10 10"><path fill="currentColor" fill-rule="evenodd" d="M1 4.51a.5.5 0 0 0 0 1h3.5l.01 3.5a.5.5 0 0 0 1-.01V5.5l3.5-.01a.5.5 0 0 0-.01-1H5.5L5.49.99a.5.5 0 0 0-1 .01v3.5l-3.5.01z" clip-rule="evenodd"></path></svg>
+          </span>
+          </button>
+        </div>
         <br />
         <ProductForm
           productOptions={productOptions}
           selectedVariant={selectedVariant}
+          quantity={quantity}
         />
-        <br />
-        <br />
-        <p>
-          <strong>Description</strong>
-        </p>
-        <br />
-        <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-        <br />
+
       </div>
       <Analytics.ProductView
         data={{
@@ -134,14 +199,87 @@ export default function Product() {
               vendor: product.vendor,
               variantId: selectedVariant?.id || '',
               variantTitle: selectedVariant?.title || '',
-              quantity: 1,
+              quantity: quantity,
             },
           ],
         }}
       />
     </div>
+    </div>
+    <div className="page-width">
+    <div className='recommended-section'>
+      <RecommendedProducts products={data.recommendedProducts} />
+    </div>
+    </div>
+    </>
   );
 }
+
+function RecommendedProducts({ products }) {
+  return (
+    <div className="recommended-products product-grid-section">
+      <h2>Recommended Products</h2> 
+      <Suspense fallback={<div className="loading-spinner">Loading...</div>}>
+        <Await resolve={products}>
+          {(response) => (
+            <div className="recommended-products-grid">
+              {response
+                ? response.products.nodes.map((product) => (
+                    <Link
+                      key={product.id}
+                      className="recommended-product"
+                      to={`/products/${product.handle}`}
+                    >
+                      <Image
+                        data={product.images.nodes[0]}
+                        aspectRatio="1/1"
+                        sizes="(min-width: 45em) 20vw, 50vw"
+                      />
+                      <h4>{product.title}</h4>
+                      <small>
+                        <Money data={product.priceRange.minVariantPrice} />
+                      </small>
+                    </Link>
+                  ))
+                : null}
+            </div>
+          )}
+        </Await>
+      </Suspense>
+    </div>
+  );
+}
+
+const RECOMMENDED_PRODUCTS_QUERY = `#graphql
+  fragment RecommendedProduct on Product {
+    id
+    title
+    handle
+    priceRange {
+      minVariantPrice {
+        amount
+        currencyCode
+      }
+    }
+    images(first: 1) {
+      nodes {
+        id
+        url
+        altText
+        width
+        height
+      }
+    }
+  }
+  query RecommendedProducts($country: CountryCode, $language: LanguageCode)
+    @inContext(country: $country, language: $language) {
+    products(first: 4, sortKey: UPDATED_AT, reverse: true) {
+      nodes {
+        ...RecommendedProduct
+      }
+    }
+  }
+`;
 
 const PRODUCT_VARIANT_FRAGMENT = `#graphql
   fragment ProductVariant on ProductVariant {
@@ -187,18 +325,18 @@ const PRODUCT_FRAGMENT = `#graphql
     vendor
     handle
     descriptionHtml
-    images(first: 10) {
-        nodes {
-          id
-          url
-          altText
-          width
-          height
-        }
-      }
     description
     encodedVariantExistence
     encodedVariantAvailability
+    images(first: 10) {
+      nodes {
+        id
+        url
+        altText
+        width
+        height
+      }
+    }
     options {
       name
       optionValues {

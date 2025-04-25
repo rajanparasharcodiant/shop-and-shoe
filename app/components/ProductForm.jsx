@@ -8,7 +8,7 @@ import {useAside} from './Aside';
  *   selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
  * }}
  */
-export function ProductForm({productOptions, selectedVariant}) {
+export function ProductForm({productOptions, selectedVariant, quantity}) {
   const navigate = useNavigate();
   const {open} = useAside();
   return (
@@ -20,7 +20,7 @@ export function ProductForm({productOptions, selectedVariant}) {
         return (
           <div className="product-options" key={option.name}>
             <h5>{option.name}</h5>
-            <div className="product-options-grid">
+            <ul className="product-options-grid">
               {option.optionValues.map((value) => {
                 const {
                   name,
@@ -47,9 +47,12 @@ export function ProductForm({productOptions, selectedVariant}) {
                       replace
                       to={`/products/${handle}?${variantUriQuery}`}
                       style={{
-                        border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
+                        backgroundColor: selected
+                          ? 'black'
+                          : 'transparent',
+                          color: selected
+                          ? 'white'
+                          : 'black',
                         opacity: available ? 1 : 0.3,
                       }}
                     >
@@ -63,17 +66,17 @@ export function ProductForm({productOptions, selectedVariant}) {
                   // the variant so that SEO bots do not index these as
                   // duplicated links
                   return (
+                    <li>
                     <button
                       type="button"
                       className={`product-options-item${
                         exists && !selected ? ' link' : ''
-                      }`}
+                      } ${available ? '' : 'disabled'}`}
                       key={option.name + name}
                       style={{
-                        border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
-                        opacity: available ? 1 : 0.3,
+                        backgroundColor: selected ? 'black': 'white',
+                        color: selected ? 'white' : !available ? 'grey' : 'black',
+                        opacity: available ? 1 : 0.5,
                       }}
                       disabled={!exists}
                       onClick={() => {
@@ -87,11 +90,11 @@ export function ProductForm({productOptions, selectedVariant}) {
                     >
                       <ProductOptionSwatch swatch={swatch} name={name} />
                     </button>
+                    </li>
                   );
                 }
               })}
-            </div>
-            <br />
+              </ul>
           </div>
         );
       })}
@@ -105,7 +108,7 @@ export function ProductForm({productOptions, selectedVariant}) {
             ? [
                 {
                   merchandiseId: selectedVariant.id,
-                  quantity: 1,
+                  quantity: quantity,
                   selectedVariant,
                 },
               ]

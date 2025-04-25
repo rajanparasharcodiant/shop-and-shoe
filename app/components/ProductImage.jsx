@@ -32,8 +32,8 @@ export function ProductImage({image, allImages = []}) {
           alt={image.altText || 'Product Image'}
           data={image}
           key={image.id}
-          width={600}
-          height={600}
+          width={1000}
+          height={1000}
           crop=""
         />
       </div>
