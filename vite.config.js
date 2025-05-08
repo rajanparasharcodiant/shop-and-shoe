@@ -28,6 +28,9 @@ export default defineConfig({
     // withtout inlining assets as base64:
     assetsInlineLimit: 0,
   },
+  server: {
+    allowedHosts: ['prompt-duly-swift.ngrok-free.app'],
+  },
   ssr: {
     optimizeDeps: {
       /**

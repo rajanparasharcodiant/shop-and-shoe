@@ -171,6 +171,8 @@ function ProductItem({product, loading}) {
       setShowPopup(false);
     }, 1000);
   };
+  
+  const hasMultipleVariants = product.variants.nodes.length > 1;
 
   return (
     <>
@@ -182,10 +184,27 @@ function ProductItem({product, loading}) {
               aspectRatio="1/1"
               data={selectedVariant.image || product.featuredImage}
               loading={loading}
-              sizes="(min-width: 45em) 400px, 100vw"
+              width={1000}
+              height={1000}
+              crop=""
             />
           </Link>
-          <button className="quick-view-btn" onClick={() => setShowPopup(true)}>➕</button>
+          {
+            hasMultipleVariants ? (
+              <button className="quick-view-btn" onClick={() => setShowPopup(true)}>➕</button>
+            ) : (
+              <button className="quick-view-btn">
+                <AddToCartButton
+                  disabled={!selectedVariant?.availableForSale}
+                  lines={selectedVariant ? [{merchandiseId: selectedVariant.id, quantity: 1}] : []}
+                  onClick={handleAddToCart}
+                >
+                  ➕
+                </AddToCartButton>
+              </button>
+            )
+          }
+
         </div>
         <Link to={variantUrl}><h4>{product.title}</h4></Link>
         <small><Money data={selectedVariant.price} /></small>

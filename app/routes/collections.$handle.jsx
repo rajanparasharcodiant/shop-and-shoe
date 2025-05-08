@@ -193,7 +193,9 @@ function ProductItem({product, loading}) {
               aspectRatio="1/1"
               data={selectedVariant.image || product.featuredImage}
               loading={loading}
-              sizes="(min-width: 45em) 400px, 100vw"
+              width={1000}
+              height={1000}
+              crop=""
             />
           </Link>
           <button className="quick-view-btn" onClick={() => setShowPopup(true)}>➕</button>
